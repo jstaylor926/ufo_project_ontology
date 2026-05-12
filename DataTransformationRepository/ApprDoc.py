@@ -3,7 +3,10 @@ from pyspark.sql.functions import col, udf
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType
 from pyspark.sql.types import DateType, BooleanType, ArrayType, TimestampType
 from transforms.api import Input, Output, transform
-from datetime import date, timedelta
+from datetime import date
+
+# V2 forward-compatibility shim. See DataTransformationRepository/v2_compat.py.
+from v2_compat import maybe_normalize_approval, maybe_normalize_messages, timedelta
 
 # Builds a data set for UFOentry Objects
 # Comments are made above the line of code they are pertinent to
@@ -26,6 +29,9 @@ def compute(message, rdaf, outputData):
     schemaSet = schemaSetGen()
     rdaf_DF = rdaf.dataframe()
     message_DF = message.dataframe()
+    # V2 forward-compat — rename V2 columns / fold TZ pairs to V1 spelling.
+    rdaf_DF = maybe_normalize_approval(rdaf_DF)
+    message_DF = maybe_normalize_messages(message_DF)
     rdaf_DF = rdaf_DF.select(['approvalDocStatus', 'total_flight_cycles', 'total_flight_hours',
                                 'component_flight_hours', 'component_flight_cycles',
                                 'target_date', 'end_target_date',

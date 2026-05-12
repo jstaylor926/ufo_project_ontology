@@ -9,6 +9,14 @@ import {FSRFunctions } from "./FSRFunctions";
 import {FsrTeam} from "./fsrTeam";
 
 import {ReportGenerator} from "./reportGenerator"
+
+// V2 forward-compatibility — translate snake_case PriorityAlgorithm
+// parameter keys to their V1 equivalents before the switch below sees
+// them. See v2compat.ts for the mapping table. V1 keys pass through
+// unchanged; unknown keys pass through unchanged (preserving the V1
+// default-no-match behavior).
+import { toV1PriorityKey } from "./v2compat";
+
 export {Comments, Misc, FSRFunctions, FsrTeam, ReportGenerator};
 // All functions that act on the Ontology are found here 
 // Comments are made above the line of code they are pertinent to
@@ -222,7 +230,7 @@ export class MyFunctions {
     //ouput: [[status, open], [domain, repair], [Title, Fuselage Skin DE...], ....]
     @Function()
     public getPriorityValsForOneEntry(algoConfig : (string|undefined)[][], entry : Ufoentry) : (string|undefined)[][] {
-        //find active configuration 
+        //find active configuration
         let configuration = algoConfig;
         let i = 0 ;
         let configVals = [];
@@ -231,8 +239,12 @@ export class MyFunctions {
                 let val = configuration[0][i]; //ex: configuration[0][i] : 'RTS'
                 let kvArr = [val];
                 if ((configuration[0][i] !== (undefined )) && (val !== undefined)) {
-                    // prop = configuration[0][i];
-                    switch(configuration[0][i]) {
+                    // V2 forward-compatibility — if the parameter key was
+                    // authored against the V2 (snake_case) naming, translate
+                    // to the V1 equivalent the switch below already handles.
+                    // V1 keys and unknown keys pass through unchanged.
+                    const switchKey = toV1PriorityKey(configuration[0][i]);
+                    switch(switchKey) {
                         //push the appropriate Entry data 
                         //some entry data (datetypes, booltypes, inttypes) need to be cast as a String
                         //      toString() doesnt accept parameters that might be null, so some of the switch cases have an if (!null) check before pushing

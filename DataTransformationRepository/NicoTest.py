@@ -5,6 +5,9 @@ from pyspark.sql.types import DateType, BooleanType, ArrayType, TimestampType
 from transforms.api import Input, Output, transform
 from datetime import date
 
+# V2 forward-compatibility shim. See DataTransformationRepository/v2_compat.py.
+from v2_compat import maybe_normalize_dossier_index
+
 # Builds a data set for UFOentry Objects
 # Comments are made above the line of code they are pertinent to
 icaoSeen = {}
@@ -23,6 +26,8 @@ def compute(outputData, source_df):
         .config("spark.executor.memory", "6g").getOrCreate()
 
     source_df = source_df.dataframe()
+    # V2 forward-compat — rename V2 columns to V1 spelling.
+    source_df = maybe_normalize_dossier_index(source_df)
     source_df = source_df.select("operatorICAOCode")
     Rows = source_df.collect() # noqa
     for each in Rows: 

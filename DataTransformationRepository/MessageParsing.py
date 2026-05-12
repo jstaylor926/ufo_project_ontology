@@ -2,6 +2,10 @@ from pyspark.sql import Row, SparkSession
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, BooleanType, DateType, TimestampType
 from transforms.api import Input, Output, transform
 import datetime
+
+# V2 forward-compatibility shim. See DataTransformationRepository/v2_compat.py.
+# Auto-detect and idempotent — passthrough on V1, rename + TZ-normalize on V2.
+from v2_compat import maybe_normalize_messages
 # Builds a data set for ICAO Objects
 # this build mostly just creates a template for the ICAO objects as most of the deditting will be done through the
 #       Onotology and Ontology actions, which allows for a more dynamic usage of ICAO objects
@@ -18,6 +22,8 @@ def driver(outputData, source_df):
     schemaSet = schemaSetGen()
     # pull datframe from INPUT data set
     source_df = source_df.dataframe()
+    # V2 forward-compat — rename V2 columns / fold TZ pairs to V1 spelling.
+    source_df = maybe_normalize_messages(source_df)
     # selects relevant columns from INPUT dataset
     source_df = source_df.select(['id_dossier', 'id_message', 'messageCreationDate',
                                   'messageFrom_companyName', 'messageTo_companyName',
