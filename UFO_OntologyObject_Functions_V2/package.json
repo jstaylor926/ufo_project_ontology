@@ -1,0 +1,17 @@
+{
+  "name": "ufo-ontology-functions-v2",
+  "version": "0.1.0",
+  "private": true,
+  "description": "UFO V2 ontology functions — Phase 4 spike. Comments module is the first port.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0",
+    "@types/node": "^20.11.0"
+  }
+}
