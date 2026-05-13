@@ -10,6 +10,22 @@
  *
  * The class is purposely small. Anything that can be unit-tested without
  * Foundry lives in `parse.ts` / `views.ts`.
+ *
+ * Phase-4 function-backed property bindings (Ontology Spec §7.3). Each
+ * `Ufoentry.*Md` property binds to the like-named function below; the
+ * `commentsByCode` / `mostRecentByCode` dispatch methods remain exposed
+ * for Workshop widgets that pick the code at runtime.
+ *
+ *   Ufoentry property                  ←  function
+ *   commentBreakdownMd                    commentBreakdown
+ *   commentsTechnicalMd                   commentsTechnicalMd
+ *   commentsPartsMd                       commentsPartsMd
+ *   commentsCustSuppMd                    commentsCustSuppMd
+ *   mostRecentTechnicalCommentMd          mostRecentTechnicalCommentMd
+ *   mostRecentPartsCommentMd              mostRecentPartsCommentMd
+ *   mostRecentCustSuppCommentMd           mostRecentCustSuppCommentMd
+ *   linkedCommentsMd                      linkedCommentsMarkdown
+ *   mostRecentLinkedCommentMd             mostRecentLinkedComment
  */
 
 import {
@@ -62,7 +78,7 @@ export class CommentsV2 {
   /**
    * Replaces V1 `newCommentBreakdownhelper`. Maps every entry to a
    * `Parts: N / Tech: N / CS: N / Link: N` summary, suppressed when all
-   * counts are zero.
+   * counts are zero. Bound to `Ufoentry.commentBreakdownMd`.
    */
   @Function()
   public commentBreakdown(
@@ -86,27 +102,39 @@ export class CommentsV2 {
   /**
    * Replaces V1 `partsComments` / `technicalComments` / `custSuppComments`.
    * One dispatch instead of three near-identical functions.
+   *
+   * Returns a per-entry map so the result is FBP-shaped. The three
+   * `commentsTechnicalMd` / `commentsPartsMd` / `commentsCustSuppMd`
+   * wrappers below are the canonical bind targets; this dispatch stays
+   * exposed for Workshop widgets that pick the code at runtime.
    */
   @Function()
   public commentsByCode(
     entries: ObjectSet<Ufoentry>,
     code: CommentCode,
     fsr: UfoFsr,
-  ): string {
-    let out = "";
+  ): FunctionsMap<Ufoentry, string> {
+    const since = sinceFrom(fsr);
+    const out = new FunctionsMap<Ufoentry, string>();
     for (const e of entries.all()) {
       const filtered = filterByCode(readEntryComments(e), code);
-      out += renderCommentMarkdown(filtered, {
-        newSince: sinceFrom(fsr),
-        users: COMMENT_USERS,
-      });
+      out.set(
+        e,
+        renderCommentMarkdown(filtered, {
+          newSince: since,
+          users: COMMENT_USERS,
+        }),
+      );
     }
     return out;
   }
 
   /**
    * Replaces V1 `mostRecentPartsComment` / `mostRecentTechnicalComment` /
-   * `mostRecentCustSuppComments`. One dispatch.
+   * `mostRecentCustSuppComments`. One dispatch instead of three.
+   * The three `mostRecent*CommentMd` wrappers below are the canonical
+   * FBP bind targets; this dispatch stays exposed for runtime code
+   * selection.
    */
   @Function()
   public mostRecentByCode(
@@ -121,23 +149,30 @@ export class CommentsV2 {
     return out;
   }
 
-  /** Replaces V1 `linkedComments` markdown renderer. */
+  /**
+   * Replaces V1 `linkedComments` markdown renderer. Bound to
+   * `Ufoentry.linkedCommentsMd`.
+   */
   @Function()
   public linkedCommentsMarkdown(
     entries: ObjectSet<Ufoentry>,
     fsr: UfoFsr,
-  ): string {
-    let out = "";
+  ): FunctionsMap<Ufoentry, string> {
+    const since = sinceFrom(fsr);
+    const out = new FunctionsMap<Ufoentry, string>();
     for (const e of entries.all()) {
-      out += renderLinkedMarkdown(readLinkedComments(e), e.idDossier ?? "", {
-        newSince: sinceFrom(fsr),
-        users: COMMENT_USERS,
-      });
+      out.set(
+        e,
+        renderLinkedMarkdown(readLinkedComments(e), e.idDossier ?? "", {
+          newSince: since,
+          users: COMMENT_USERS,
+        }),
+      );
     }
     return out;
   }
 
-  /** Replaces V1 `mostRecentLinkedComment`. */
+  /** Replaces V1 `mostRecentLinkedComment`. Bound to `Ufoentry.mostRecentLinkedCommentMd`. */
   @Function()
   public mostRecentLinkedComment(
     entries: ObjectSet<Ufoentry>,
@@ -151,6 +186,62 @@ export class CommentsV2 {
       out.set(e, recent?.body);
     }
     return out;
+  }
+
+  // ---------------------------------------------------------------------
+  // Per-FBP wrappers — canonical bind targets for the §7.3 properties.
+  // Each is a thin pass-through that fixes the `code` parameter so the
+  // Foundry binding doesn't need to thread per-binding constants.
+
+  /** Bound to `Ufoentry.commentsTechnicalMd`. */
+  @Function()
+  public commentsTechnicalMd(
+    entries: ObjectSet<Ufoentry>,
+    fsr: UfoFsr,
+  ): FunctionsMap<Ufoentry, string> {
+    return this.commentsByCode(entries, "Technical", fsr);
+  }
+
+  /** Bound to `Ufoentry.commentsPartsMd`. */
+  @Function()
+  public commentsPartsMd(
+    entries: ObjectSet<Ufoentry>,
+    fsr: UfoFsr,
+  ): FunctionsMap<Ufoentry, string> {
+    return this.commentsByCode(entries, "Parts", fsr);
+  }
+
+  /** Bound to `Ufoentry.commentsCustSuppMd`. */
+  @Function()
+  public commentsCustSuppMd(
+    entries: ObjectSet<Ufoentry>,
+    fsr: UfoFsr,
+  ): FunctionsMap<Ufoentry, string> {
+    return this.commentsByCode(entries, "Customer Support", fsr);
+  }
+
+  /** Bound to `Ufoentry.mostRecentTechnicalCommentMd`. */
+  @Function()
+  public mostRecentTechnicalCommentMd(
+    entries: ObjectSet<Ufoentry>,
+  ): FunctionsMap<Ufoentry, string | undefined> {
+    return this.mostRecentByCode(entries, "Technical");
+  }
+
+  /** Bound to `Ufoentry.mostRecentPartsCommentMd`. */
+  @Function()
+  public mostRecentPartsCommentMd(
+    entries: ObjectSet<Ufoentry>,
+  ): FunctionsMap<Ufoentry, string | undefined> {
+    return this.mostRecentByCode(entries, "Parts");
+  }
+
+  /** Bound to `Ufoentry.mostRecentCustSuppCommentMd`. */
+  @Function()
+  public mostRecentCustSuppCommentMd(
+    entries: ObjectSet<Ufoentry>,
+  ): FunctionsMap<Ufoentry, string | undefined> {
+    return this.mostRecentByCode(entries, "Customer Support");
   }
 
   /**

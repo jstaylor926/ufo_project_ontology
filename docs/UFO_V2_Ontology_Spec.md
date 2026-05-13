@@ -572,12 +572,20 @@ Package: `UFO_OntologyObject_Functions_V2/src/comments/`. Test coverage: `parse.
 | Function | Decorator | Inputs | Output | Bound as |
 | --- | --- | --- | --- | --- |
 | `commentBreakdown` | `@Function()` | `entries: ObjectSet<Ufoentry>`, `fsr: UfoFsr` | `FunctionsMap<Ufoentry, String>` (markdown summary) | function-backed property on `Ufoentry.commentBreakdownMd` |
-| `commentsByCode` | `@Function()` | `entries`, `code: CommentCode`, `fsr` | `String` (markdown) | feeds `Ufoentry.commentsTechnicalMd`, `commentsPartsMd`, `commentsCustSuppMd` (3 properties; one per code) |
-| `mostRecentByCode` | `@Function()` | `entries`, `code: CommentCode` | `FunctionsMap<Ufoentry, String\|undefined>` | feeds `Ufoentry.mostRecentTechnicalCommentMd`, etc. |
-| `linkedCommentsMarkdown` | `@Function()` | `entries`, `fsr` | `String` | feeds `Ufoentry.linkedCommentsMd` |
+| `commentsByCode` | `@Function()` | `entries`, `code: CommentCode`, `fsr` | `FunctionsMap<Ufoentry, String>` (markdown) | runtime dispatch; not directly bound — see per-code wrappers below |
+| `commentsTechnicalMd` | `@Function()` | `entries`, `fsr` | `FunctionsMap<Ufoentry, String>` | feeds `Ufoentry.commentsTechnicalMd` |
+| `commentsPartsMd` | `@Function()` | `entries`, `fsr` | `FunctionsMap<Ufoentry, String>` | feeds `Ufoentry.commentsPartsMd` |
+| `commentsCustSuppMd` | `@Function()` | `entries`, `fsr` | `FunctionsMap<Ufoentry, String>` | feeds `Ufoentry.commentsCustSuppMd` |
+| `mostRecentByCode` | `@Function()` | `entries`, `code: CommentCode` | `FunctionsMap<Ufoentry, String\|undefined>` | runtime dispatch; not directly bound — see per-code wrappers below |
+| `mostRecentTechnicalCommentMd` | `@Function()` | `entries` | `FunctionsMap<Ufoentry, String\|undefined>` | feeds `Ufoentry.mostRecentTechnicalCommentMd` |
+| `mostRecentPartsCommentMd` | `@Function()` | `entries` | `FunctionsMap<Ufoentry, String\|undefined>` | feeds `Ufoentry.mostRecentPartsCommentMd` |
+| `mostRecentCustSuppCommentMd` | `@Function()` | `entries` | `FunctionsMap<Ufoentry, String\|undefined>` | feeds `Ufoentry.mostRecentCustSuppCommentMd` |
+| `linkedCommentsMarkdown` | `@Function()` | `entries`, `fsr` | `FunctionsMap<Ufoentry, String>` | feeds `Ufoentry.linkedCommentsMd` |
 | `mostRecentLinkedComment` | `@Function()` | `entries` | `FunctionsMap<Ufoentry, String\|undefined>` | feeds `Ufoentry.mostRecentLinkedCommentMd` |
 | `addComment` | `@OntologyEditFunction()`, `@Edits(Ufoentry)` | `entry`, `body`, `code`, `authorDisplay`, `link`, `linkedEntries` | `void` | bound to `addComment` Action Type (§6.1) |
 | `setCommentFlag` | `@OntologyEditFunction()`, `@Edits(UfoFsr)` | `fsr: UfoFsr`, `value: Boolean` | `void` | bound to `setCommentFlag` Action Type (§6.1); throws if `fsr` is missing |
+
+The `commentsByCode` and `mostRecentByCode` methods remain `@Function()`-exposed for Workshop widgets that pick a `code` at runtime. The six `*Md` wrappers above each fix one `CommentCode` so the FBP binding system has a 1:1 function-to-property mapping (no per-binding constant-parameter threading required).
 
 **Pure helpers (`views.ts`)** — usable in unit tests and other functions:
 

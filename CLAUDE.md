@@ -9,9 +9,13 @@ This repo holds the UFO (Unified Fleet Operations) ontology project, mid-migrati
 - **`DataTransformationRepository/`** — Foundry PySpark transforms. `*.py` files at the top level are V1 transforms (`UFOEntries.py`, `MessageParsing.py`, `ApprDoc.py`, `UFOPath.py`, `ICAOObjects.py`). `v2_bronze/` and `v2_parity/` are V2-only Python packages. `v2_compat.py` is the V1↔V2 compatibility shim — see "Migration architecture" below.
 - **`UFO_OntologyObject_Functions/`** — V1 Foundry ontology functions (TypeScript). `index.ts` is the main entry; `Comments.ts`, `FSRFunctions.ts`, `Misc.ts`, `reportGenerator.ts` etc. are domain modules. `v2compat.ts` is the V1↔V2 shim for `PriorityAlgorithm` parameter keys.
 - **`UFO_OntologyObject_Functions_V2/`** — Standalone npm/TypeScript project for the **V2** ontology functions. Phase 4 spike; **Comments** is the first module ported. Has its own `package.json`, `tsconfig.json`, vitest config.
-- **`Data/`** — CSV samples for both V1 and V2 source feeds (used as reference, not test fixtures).
+- **`Practice_Run/`** — Local-laptop scaffolding to run the V2 PySpark transforms outside Foundry. Stubs `transforms.api`, provides per-transform runner scripts, and writes parquet to `Practice_Run/output/`. See "Practice_Run (local PySpark execution)" below.
+- **`Data/`** — CSV samples for both V1 and V2 source feeds. Used as input by `Practice_Run/`; also reference for the Foundry side.
 - **`Documentation/`** — PDF user/feature guides for the UFO product.
+- **`docs/`** — Design notes in Markdown. `UFO_V2_Ontology_Spec.md` is the current V2 ontology spec.
 - **`_ProjectReview/`** — Design notes and proposals for the V1→V2 migration (`UFO_V2_*.docx`). Useful background but not code.
+
+The root-level `pyproject.toml`, `main.py`, `uv.lock`, and `.venv/` are a placeholder `uv` scaffold — `main.py` just prints "Hello". They are **not** the project entry point. Real Python work happens under `DataTransformationRepository/` (Foundry) and `Practice_Run/` (local).
 
 ## Build / test / typecheck
 
@@ -38,7 +42,21 @@ No local toolchain — these files compile only inside Foundry. There is no `pac
 
 ### PySpark transforms (`DataTransformationRepository/`)
 
-These run only inside Foundry's `transforms.api` runtime. There is no requirements file and no local test harness. Edit, then rely on Foundry CI/Code Review for validation. The decorator pattern is `@transform(... Input(rid), Output(rid))` with explicit Foundry RIDs in the source — those bind to specific datasets per environment.
+In Foundry these run under `transforms.api`. The decorator pattern is `@transform(... Input(rid), Output(rid))` with explicit Foundry RIDs in the source — those bind to specific datasets per environment.
+
+Locally, use `Practice_Run/` to drive the V2 transforms (Bronze + parity) against the CSVs in `Data/`. The V1 transforms have no local harness — rely on Foundry CI/Code Review for those.
+
+### Practice_Run (local PySpark execution)
+
+```bash
+pip install -r Practice_Run/requirements.txt     # PySpark 3.5, pandas, pyarrow
+python Practice_Run/run_all.py                   # all five Bronze stages + parity
+python Practice_Run/run_all.py --skip-parity     # bronze only
+python Practice_Run/run_all.py --only bronze.linked_dossier
+python Practice_Run/runners/run_bronze_techrequest_index.py   # single stage
+```
+
+Requires Java 11 or 17 on PATH (PySpark dependency). Parquet output lands in `Practice_Run/output/`. The harness works by shadowing the Foundry `transforms` package with `Practice_Run/transforms/` (an identity-decorator stub) — the runners call each V2 module's bare `_transform(df)` function directly, never the `@transform`-decorated `compute()`. When adding a new V2 dataset, mirror the entry in both `Practice_Run/config.py::DATASETS` and `DataTransformationRepository/v2_bronze/_bronze_utils.py::RIDS` so the two sides stay in lockstep.
 
 ## Migration architecture (V1 ↔ V2)
 
@@ -53,7 +71,7 @@ The migration has four phases, and code is in flight for several at once:
 1. **Phase 1 — Bronze** (`v2_bronze/`). Raw, schema-enforced ingest of the five V2 source files into Foundry datasets. Content-preserving — no business logic. Every Bronze table has `_ingested_at`, `_source_dataset`, `_row_uid` data-quality columns and a `(value, *_tz)` pair folded to one UTC `TimestampType` column.
 2. **Phase 2 — Silver** (not yet built). Will plug into the parity harness in place of Bronze.
 3. **Phase 3 — Ontology re-shape** (not yet built). Retires V1 column names from the ontology entirely.
-4. **Phase 4 — V2 functions** (`UFO_OntologyObject_Functions_V2/`). Re-port of the ontology functions against the new shape. **Comments** is the first port; others come after the ontology re-shape.
+4. **Phase 4 — Comments V2 cut-over** (`UFO_OntologyObject_Functions_V2/`). Replace V1 `Comments.ts` bindings with `CommentsV2` function-backed properties + the `addComment` action, keeping V1 string storage shape. **Comments is the only V2 port.** The remaining V1 modules (`index.ts` priority engine, `FSRFunctions`, `Misc`, `fsrTeam`, `reportGenerator`, `restoration`) are retained in V1 indefinitely per Ontology Spec §7.2 and bridged by `v2compat.ts`. Phases 5–6 cover lifecycle actions and V1 sunset, not further re-ports.
 
 ### The compatibility shims
 
