@@ -577,6 +577,7 @@ Package: `UFO_OntologyObject_Functions_V2/src/comments/`. Test coverage: `parse.
 | `linkedCommentsMarkdown` | `@Function()` | `entries`, `fsr` | `String` | feeds `Ufoentry.linkedCommentsMd` |
 | `mostRecentLinkedComment` | `@Function()` | `entries` | `FunctionsMap<Ufoentry, String\|undefined>` | feeds `Ufoentry.mostRecentLinkedCommentMd` |
 | `addComment` | `@OntologyEditFunction()`, `@Edits(Ufoentry)` | `entry`, `body`, `code`, `authorDisplay`, `link`, `linkedEntries` | `void` | bound to `addComment` Action Type (§6.1) |
+| `setCommentFlag` | `@OntologyEditFunction()`, `@Edits(UfoFsr)` | `fsr: UfoFsr`, `value: Boolean` | `void` | bound to `setCommentFlag` Action Type (§6.1); throws if `fsr` is missing |
 
 **Pure helpers (`views.ts`)** — usable in unit tests and other functions:
 

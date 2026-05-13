@@ -13,14 +13,17 @@
  */
 
 import {
+  Edits,
   Function,
   FunctionsMap,
   OntologyEditFunction,
   Timestamp,
-  type ObjectSet,
-  type Ufoentry,
-  type UfoFsr,
 } from "@foundry/functions-api";
+import {
+  Ufoentry,
+  UfoFsr,
+  type ObjectSet,
+} from "@foundry/ontology-api";
 import {
   parseEntryComment,
   parseLinkedComment,
@@ -157,8 +160,13 @@ export class CommentsV2 {
    * `link === true`, to every supplied linked dossier's `linkedComments`
    * array. Storage remains V1 string-encoded so the existing V1 ontology
    * keeps reading correctly during the transition.
+   *
+   * Validation per Ontology Spec §6.1: `code` ∈ COMMENT_CODES (enforced by
+   * the type system at the action boundary); `body` must be non-empty;
+   * `entry` must exist.
    */
   @OntologyEditFunction()
+  @Edits(Ufoentry)
   public addComment(
     entry: Ufoentry,
     body: string,
@@ -167,6 +175,13 @@ export class CommentsV2 {
     link: boolean,
     linkedEntries: ObjectSet<Ufoentry>,
   ): void {
+    if (entry == null) {
+      throw new Error("addComment: entry is required");
+    }
+    if (body == null || body.trim() === "") {
+      throw new Error("addComment: body must be non-empty");
+    }
+
     const draft: CommentEntry = {
       timestamp: Timestamp.now().valueOf(),
       authorUuid: "",
@@ -191,5 +206,19 @@ export class CommentsV2 {
     for (const le of linkedEntries.all()) {
       le.linkedComments = [...(le.linkedComments ?? []), linkedRaw];
     }
+  }
+
+  /**
+   * Replaces V1 `Misc.commentFlag`. V1 was a toggle taking an ObjectSet;
+   * V2 is an explicit per-FSR setter so the action is idempotent under
+   * retries (per Ontology Spec §6.1).
+   */
+  @OntologyEditFunction()
+  @Edits(UfoFsr)
+  public setCommentFlag(fsr: UfoFsr, value: boolean): void {
+    if (fsr == null) {
+      throw new Error("setCommentFlag: fsr is required");
+    }
+    fsr.postCommentFlag = value;
   }
 }
