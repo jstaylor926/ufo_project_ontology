@@ -74,12 +74,15 @@ export class Ufoentry {
   lastTechComment?: Timestamp;
   lastCustComment?: Timestamp;
   operIcao?: string;
+  isFavorite?: boolean;
 }
 
 export class UfoFsr {
   name?: string;
   lastLogIn?: Timestamp;
   postCommentFlag?: boolean;
+  favorites?: string[];
+  delete(): void { /* stub */ }
 }
 
 export interface ObjectSet<T> {
@@ -95,6 +98,13 @@ export const Objects = {
         filter: () => Objects.search().ufoentry().filter(_),
       }),
       all: (): Ufoentry[] => [],
+    }),
+    ufoFsr: () => ({
+      filter: (_: (f: UfoFsr) => unknown): ObjectSet<UfoFsr> => ({
+        all: () => [],
+        filter: () => Objects.search().ufoFsr().filter(_),
+      }),
+      all: (): UfoFsr[] => [],
     }),
   }),
 };

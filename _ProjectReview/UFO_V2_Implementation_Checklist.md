@@ -3,10 +3,10 @@
 | Field | Value |
 | --- | --- |
 | Document | UFO V2 Migration Implementation Checklist |
-| Version | 1.1 (markdown re-export, updated state) |
+| Version | 1.2 (Functions V2 scope re-confirmed as full port) |
 | Owner | Solution Architecture |
 | Last updated | 2026-05-13 |
-| Supersedes | `UFO_V2_Implementation_Checklist.docx` v1.0 (12 May 2026) |
+| Supersedes | `UFO_V2_Implementation_Checklist.docx` v1.0 (12 May 2026); markdown v1.1 (13 May 2026 AM) |
 
 ☑ = complete · ☐ = pending · ◐ = partial (some sub-items done)
 
@@ -24,6 +24,7 @@ Net-new since the original `.docx` checklist was authored:
 | 2 | **Local execution harness added** — `Practice_Run/` with stub `transforms.api`, central CSV→logical-name config, and per-stage runners for all five Bronze transforms and the parity harness. Committed `0c8ad4d`. | Cross-cutting tooling — see §10 |
 | 3 | **Full ontology technical spec authored** — `docs/UFO_V2_Ontology_Spec.md` (1,197 lines). Implementation-depth catalog of object types, link types, action types, function-backed properties, datasource lineage, V1↔V2 mappings. Committed `0c8ad4d`. | P3 (deepens the Phase 3 proposal) |
 | 4 | **Repository onboarding doc** — `CLAUDE.md` at repo root. Committed `0c8ad4d`. | Cross-cutting docs |
+| 5 | **Functions V2 scope re-confirmed as a full port** (v1.2, 13 May 2026 PM). All eight V1 TypeScript modules port to `UFO_OntologyObject_Functions_V2/` per Spike Design Note §10 order; Comments-only language removed from `CLAUDE.md` and `docs/UFO_V2_Ontology_Spec.md` §7.2. `v2compat.ts` retirement re-coupled from P6 to end of P4 (after priority-driver port). `v2_compat.py` retirement remains at P6. | **P4** — see §7 |
 
 No items previously marked ☑ have regressed. No previously-pending **code** items have moved to ☑ since v1.0.
 
@@ -196,7 +197,8 @@ Backed by `_ProjectReview/UFO_V2_V1_Forward_Compatibility_Prep.docx`. The shims 
 | ☑ | Integrate `maybe_normalize_*` at the top of `UFOEntries.py`, `MessageParsing.py`, `ApprDoc.py`, `NicoTest.py`. | SW Eng | Completed 12 May 2026. V1 logic below the call site unchanged. |
 | ☑ | Integrate `toV1PriorityKey` in `UFO_OntologyObject_Functions/index.ts` priority driver. | SW Eng | Completed 12 May 2026. |
 | ☐ | Add shim-coverage smoke test — run a V1 transform end-to-end against a V2-shaped sample CSV and verify row count + key fields match a V1-shaped reference run. | SW Eng | Belongs in `Practice_Run/`. Confirms the shim is truly passthrough on V1 and faithful on V2. |
-| ☐ | Retire `v2_compat.py` and `v2compat.ts` once P6 V1 quiesce completes. | SW Eng | Coupled to §9 V1 deprecation step. |
+| ☐ | Retire `UFO_OntologyObject_Functions/v2compat.ts` at end of P4 once the priority-driver port (`index.ts` → `src/prioritization/algorithm.ts`) lands. V2 functions consume V2 parameter keys natively, so the key-rewrite shim is no longer needed. | SW Eng | Coupled to §7 Phase 4 port #6. |
+| ☐ | Retire `DataTransformationRepository/v2_compat.py` at end of P6 once V1 PySpark transforms are decommissioned. | SW Eng | Coupled to §9 V1 deprecation step. |
 
 ---
 

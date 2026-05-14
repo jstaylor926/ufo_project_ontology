@@ -606,19 +606,24 @@ The `commentsByCode` and `mostRecentByCode` methods remain `@Function()`-exposed
 
 `parseTimestamp` accepts both ISO-8601 and epoch millis. `resolveMentions(body, users)` substitutes UUID mentions (backtick-wrapped) with display names from the `COMMENT_USERS` map (36 entries in V2 dictionary).
 
-### 7.2 V1 functions retained (`UFO_OntologyObject_Functions/`)
+### 7.2 V1 functions — V2 port plan (`UFO_OntologyObject_Functions/` → `UFO_OntologyObject_Functions_V2/`)
 
-| File | Key exports | Binds | Notes |
-| --- | --- | --- | --- |
-| `index.ts` | `priorityDriver`, `configureAlgorithm`, `calculateGlobalScore`, `fsrEntryDriver`, `escalate`, `createEscalationObject`, `setSharedProperties`, `updatelatestRts` | UfoEntry, PriorityAlgorithm, UfoFsr, UfoEscalation | The priority engine; ~50 methods |
-| `Comments.ts` | (legacy) `newCommentBreakdownhelper`, `addCommentstoUFOEntry`, `linkedComment*`, `*CommentBy*` | Ufoentry, UfoFsr, Fsrteam | **Deprecated** at V2 cut-over — superseded by `CommentsV2` |
-| `FSRFunctions.ts` | `scanandDelete`, `scenarioFSRMatch`, `addAndupdateFSRFavs`, `removeAndupdateFSRFavs` | UfoFsr, Ufoentry | |
-| `Misc.ts` | `commentFlag` | UfoFsr | trivial toggle |
-| `fsrTeam.ts` | `setTeamMembers` | Fsrteam, UfoFsr | |
-| `reportGenerator.ts` | `reportDriver`, `getEscalations`, `getComments`, `formatComments` | Fsrteam, UfoFsr, UfoEscalation | 24-hour HTML report |
-| `restoration.ts` | `returnRestoredList`, `returnRestoredList_number`, `filterChange` | (generic) | filter-state utilities |
-| `commentUsersDictionary.ts` | `commentUsersDictionary` | (dictionary) | 28 entries in V1; **superseded** by V2 `dictionary.ts` (36 entries) |
-| `v2compat.ts` | `V2_TO_V1_PRIORITY_KEYS`, `toV1PriorityKey` | (bridging) | translates V2 snake_case parameter names → V1 priority algorithm keys |
+Every V1 TypeScript ontology function module is being ported to Functions V2 under `UFO_OntologyObject_Functions_V2/`. The Comments module is the completed spike and serves as the template (pure-logic / adapter split; vitest cases against pure modules; Foundry symbols confined to `adapter.ts`). Each remaining port follows the eight-step template in the Functions V2 Spike Design Note §10. Port order is sized easiest-to-hardest so risk concentrates at the end where the priority engine sits.
+
+| Order | Source file (V1) | Key exports | Binds | V2 target path | Port status |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `Comments.ts` (legacy) | `newCommentBreakdownhelper`, `addCommentstoUFOEntry`, `linkedComment*`, `*CommentBy*` | Ufoentry, UfoFsr, Fsrteam | `src/comments/` | ☑ Ported (spike) — V1 file deprecated at cut-over |
+| 2 | `FSRFunctions.ts` | `scanandDelete`, `scenarioFSRMatch`, `addAndupdateFSRFavs`, `removeAndupdateFSRFavs` | UfoFsr, Ufoentry | `src/fsr/{identity,favorites}.ts` | ☐ Pending |
+| 3 | `fsrTeam.ts` + `Misc.ts` | `setTeamMembers`, `commentFlag` | Fsrteam, UfoFsr | `src/fsr/teams.ts` | ☐ Pending |
+| 4 | `restoration.ts` | `returnRestoredList`, `returnRestoredList_number`, `filterChange` | (generic) | `src/dashboard/restoration.ts` | ☐ Pending |
+| 5 | `reportGenerator.ts` | `reportDriver`, `getEscalations`, `getComments`, `formatComments` | Fsrteam, UfoFsr, UfoEscalation | `src/reporting/escalation_digest.ts` | ☐ Pending — 24-hour HTML report |
+| 6 | `index.ts` (priority driver) | `priorityDriver`, `configureAlgorithm`, `calculateGlobalScore`, `setSharedProperties`, `updatelatestRts` | UfoEntry, PriorityAlgorithm, UfoFsr | `src/prioritization/algorithm.ts` | ☐ Pending — largest port (~1,350 lines, ~50 methods) |
+| 7 | `index.ts` (FSR entry driver) | `fsrEntryDriver`, stored-action replay | UfoFsr, Ufoentry | `src/fsr/edit.ts` | ☐ Pending |
+| 8 | `index.ts` (escalation) | `escalate`, `deEscalate`, `createEscalationObject` | UfoEscalation, Ufoentry, Fsrteam | `src/escalation/lifecycle.ts` | ☐ Pending |
+| — | `commentUsersDictionary.ts` | `commentUsersDictionary` (28 entries) | (dictionary) | Superseded by V2 `src/comments/dictionary.ts` (36 entries) | ☑ Superseded |
+| — | `v2compat.ts` | `V2_TO_V1_PRIORITY_KEYS`, `toV1PriorityKey` | (transitional bridge) | n/a — retires at end of P4 | ☐ Retire when port #6 (priority driver) lands. V2 functions consume V2 parameter keys natively, so the key-rewrite shim is no longer needed. |
+
+V1 source files remain in `UFO_OntologyObject_Functions/` until each corresponding V2 port deploys and its function-backed properties / actions are bound in Ontology Manager. Once a V2 binding is live, the V1 binding is removed and the V1 source file is moved out of the active build (kept in repo for reference until P6 V1 sunset).
 
 ### 7.3 Function-backed property registry (V2 target)
 
