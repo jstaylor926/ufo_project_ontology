@@ -98,3 +98,7 @@ The harness is read-only — it does not modify V1 or `v2_bronze`. When the Silv
 - **No Foundry imports in any pure-logic file** (`parse.ts`, `views.ts`, `types.ts`, `dictionary.ts`, or domain equivalents in new modules). The adapter is the only place `@foundry/*` symbols appear.
 - **Foundry RIDs** appear as literal strings in `@transform(...)` decorators and string keys in `v2_parity/_parity_utils.RIDS`. They are environment-specific; do not assume one matches another.
 - **Comment serialization** (V1 storage format the V2 adapter still has to read): millis-or-ISO timestamp, then code, then body, delimited — see `parse.test.ts` for the canonical shapes the parser must accept.
+
+## Working with Claude
+
+- **Learning-mode contributions are scoped to `Practice_Run/` only.** When operating in the `learning` output style, only ask the user to write 5–10 line code contributions for work inside `Practice_Run/` (local PySpark scaffolding is the learning surface). Everywhere else — `DataTransformationRepository/`, `UFO_OntologyObject_Functions/`, `UFO_OntologyObject_Functions_V2/`, `docs/`, `Data/` — implement directly without requesting user contributions. Educational `★ Insight` callouts are still welcome anywhere.

@@ -1,4 +1,14 @@
 /**
+ * @deprecated Pending physical removal. Retain until the V1 priority
+ * binding is removed from Ontology Manager.
+ *
+ * Status (2026-05-14): the V2 port of the priority driver landed in
+ * `UFO_OntologyObject_Functions_V2/src/prioritization/`. V2 reads V2
+ * parameter keys natively from `PriorityAlgorithm.parameters[].key`, so
+ * this shim is no longer needed by V2 callers. Delete this file (and
+ * remove the import from `index.ts`) once the V1 priority binding is
+ * decommissioned in Ontology Manager (P4 final step per Spec §7.2).
+ *
  * V1 ↔ V2 priority-algorithm key alias map.
  *
  * The V1 prioritization driver — see `MyFunctions.getPriorityValsForOneEntry`

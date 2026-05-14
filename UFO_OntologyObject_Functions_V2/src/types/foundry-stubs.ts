@@ -61,8 +61,14 @@ export class LocalDate {
   static fromEpochMs(ms: number): LocalDate {
     return new LocalDate(ms);
   }
+  static fromISOString(iso: string): LocalDate {
+    return new LocalDate(new Date(iso).getTime());
+  }
   valueOf(): number {
     return this._startOfDayMs;
+  }
+  toISOString(): string {
+    return new Date(this._startOfDayMs).toISOString();
   }
 }
 
@@ -151,24 +157,93 @@ export class FunctionsMap<K, V> {
 export interface ObjectSet<T> {
   all(): T[];
   filter(predicate: (item: T) => unknown): ObjectSet<T>;
+  /** Foundry returns these async; stub mirrors the signature so adapter typecheck passes. */
+  max<V>(selector: (item: T) => V | undefined): Promise<V | undefined>;
+  min<V>(selector: (item: T) => V | undefined): Promise<V | undefined>;
+  orderBy<V>(selector: (item: T) => { desc(): V; asc(): V }): ObjectSet<T>;
+  take(n: number): T[];
 }
 
 function emptyObjectSet<T>(): ObjectSet<T> {
   const s: ObjectSet<T> = {
     all: () => [],
     filter: () => s,
+    max: async () => undefined,
+    min: async () => undefined,
+    orderBy: () => s,
+    take: () => [],
   };
   return s;
 }
 
 export class Ufoentry {
+  // Identity & classification
   idDossier?: string;
+  internalId?: string;
+  domain?: string;
+  title?: string;
+  label?: string;
+  channel?: string;
+  isMigrated?: boolean;
+  status?: string;
+  // Aircraft
+  programLetter?: string;
+  program?: string;
+  aircraftId?: string;
+  skywiseAircraftId?: string;
+  isappforAllMsn?: boolean;
+  msn?: number;
+  aircraftType?: string;
+  aircraftModel?: string;
+  regNumber?: string;
+  craftFlighthrs?: number;
+  craftFlightcycs?: number;
+  operIcao?: string;
+  // Component / powerplant
+  engineSeries?: string;
+  engineModel?: string;
+  compSerialNum?: string;
+  compPartNum?: string;
+  compFlightcycs?: number;
+  compFlightHrs?: number;
+  compFin?: string;
+  // ATA
+  ataChap?: number;
+  ata4d?: number;
+  // Parties
+  dossReqIcao?: string;
+  dossVisIcao?: string;
+  // Lifecycle dates (timestamps in the V1 ontology; toISOString() at read time)
+  dossCreDate?: Timestamp;
+  dossUpDate?: Timestamp;
+  dossSubDate?: Timestamp;
+  dossClosDate?: Timestamp;
+  newRequestDate?: Timestamp;
+  // Message rollups
+  nbTotalMess?: number;
+  nbClosedMess?: number;
+  highestMessUrg?: string;
+  messOpen?: boolean;
+  hasAppDoc?: boolean;
+  appDocType?: string;
+  // FSR-driven
+  aircraftStatus?: string;
+  focal?: string;
+  trStatus?: string;
+  rts?: LocalDate;
+  msnRts?: LocalDate;
+  customerEscalation?: boolean;
+  internalEscalation?: boolean;
+  partsEscalation?: boolean;
+  // Priority surface
+  globalPriorityScore?: number;
+  sbcbump?: number;
+  // Comments (Comments V2 spike)
   comments?: string[];
   linkedComments?: string[];
   lastPartsComment?: Timestamp;
   lastTechComment?: Timestamp;
   lastCustComment?: Timestamp;
-  operIcao?: string;
   isFavorite?: boolean;
 }
 
@@ -213,35 +288,62 @@ export class LogFsrinputDriver {
   ufoentry?: string[];
 }
 
+/**
+ * `PriorityAlgorithm` stub. Hybrid V2 shape per the port direction:
+ * Spec §4.13 wrapper (`algorithmId`, `algorithmName`, `mainConfigFlag`,
+ * `updatedAt`, `updatedBy`) plus a `parameters` array that preserves V1's
+ * tier/span machinery inside an ordered V2 struct. Position in the array
+ * drives weighting — index 0 is highest priority, mirroring V1's
+ * `priorityParameter1`.
+ *
+ * Existing V1 `PriorityAlgorithm` instances (60 flat properties) are
+ * migrated to this shape at the Ontology layer before the V2 binding
+ * goes live; the V2 driver never sees the V1 flat shape.
+ */
+export interface ParameterEntry {
+  /** V2 parameter key, e.g. `"operator_code_icao"`. The parameter table in
+   *  `prioritization/parameters.ts` maps the key to a kind + reader. */
+  key: string;
+  /** True iff this parameter should be scored as a span over the entry
+   *  set's dynamic min/max for the read field. False = tier-based scoring
+   *  using `tiers`. */
+  isSpan: boolean;
+  /** Up to 5 strings; index 0 is highest tier. Ignored when `isSpan` is true. */
+  tiers: string[];
+}
+
+export class PriorityAlgorithm {
+  algorithmId?: string;
+  algorithmName?: string;
+  /** 1 = active configuration; 0 = inactive. Exactly one
+   *  `PriorityAlgorithm` should have value 1 at any time. */
+  mainConfigFlag?: number;
+  parameters?: ParameterEntry[];
+  updatedAt?: Timestamp;
+  updatedBy?: string;
+}
+
 export const Objects = {
   search: () => ({
     ufoentry: () => ({
-      filter: (_: (e: Ufoentry) => unknown): ObjectSet<Ufoentry> => ({
-        all: () => [],
-        filter: () => Objects.search().ufoentry().filter(_),
-      }),
+      filter: (_: (e: Ufoentry) => unknown): ObjectSet<Ufoentry> => emptyObjectSet<Ufoentry>(),
       all: (): Ufoentry[] => [],
     }),
     ufoFsr: () => ({
-      filter: (_: (f: UfoFsr) => unknown): ObjectSet<UfoFsr> => ({
-        all: () => [],
-        filter: () => Objects.search().ufoFsr().filter(_),
-      }),
+      filter: (_: (f: UfoFsr) => unknown): ObjectSet<UfoFsr> => emptyObjectSet<UfoFsr>(),
       all: (): UfoFsr[] => [],
     }),
     fsrteam: () => ({
-      filter: (_: (t: Fsrteam) => unknown): ObjectSet<Fsrteam> => ({
-        all: () => [],
-        filter: () => Objects.search().fsrteam().filter(_),
-      }),
+      filter: (_: (t: Fsrteam) => unknown): ObjectSet<Fsrteam> => emptyObjectSet<Fsrteam>(),
       all: (): Fsrteam[] => [],
     }),
     logFsrinputDriver: () => ({
-      filter: (_: (l: LogFsrinputDriver) => unknown): ObjectSet<LogFsrinputDriver> => ({
-        all: () => [],
-        filter: () => Objects.search().logFsrinputDriver().filter(_),
-      }),
+      filter: (_: (l: LogFsrinputDriver) => unknown): ObjectSet<LogFsrinputDriver> => emptyObjectSet<LogFsrinputDriver>(),
       all: (): LogFsrinputDriver[] => [],
+    }),
+    priorityAlgorithm: () => ({
+      filter: (_: (a: PriorityAlgorithm) => unknown): ObjectSet<PriorityAlgorithm> => emptyObjectSet<PriorityAlgorithm>(),
+      all: (): PriorityAlgorithm[] => [],
     }),
   }),
 };
