@@ -32,6 +32,7 @@ import {
   Timestamp,
 } from "@foundry/functions-api";
 import {
+  Fsrteam,
   Objects,
   Ufoentry,
   UfoFsr,
@@ -43,6 +44,7 @@ import {
   isFavoriteOf,
   removeFavorites,
 } from "./favorites.js";
+import { selectTeamMembers } from "./teams.js";
 
 /** Pull `idDossier` off a set of entries, dropping any that are missing one. */
 function entryIds(entries: ObjectSet<Ufoentry>): string[] {
@@ -140,5 +142,31 @@ export class FSRFunctionsV2 {
       throw new Error("removeAndUpdateFSRFavs: fsr is required");
     }
     fsr.favorites = removeFavorites(fsr.favorites, entryIds(entriesToRemove));
+  }
+}
+
+/**
+ * Replaces V1 `FsrTeam` class (file `fsrTeam.ts`). The V2 version fixes
+ * the missing-`return` bug in the filter callback and aligns to V2 column
+ * names per Ontology Spec §4.9 / §4.10:
+ *
+ *   V1 `team.operator`  →  V2 `team.operatorCode`
+ *   V1 `f.fsrteam`      →  V2 `f.operatorCode`
+ *   V1 `f.name`         →  V2 `f.userId`  (PK; spec defines `members` as Array<userId>)
+ *   V1 `team.fsrs`      →  V2 `team.members`
+ *
+ * Bound to the `setTeamMembers` action (Ontology Spec §6.3).
+ */
+export class FsrTeamV2 {
+  @OntologyEditFunction()
+  @Edits(Fsrteam)
+  public setTeamMembers(team: Fsrteam): void {
+    if (team == null) {
+      throw new Error("setTeamMembers: team is required");
+    }
+    team.members = selectTeamMembers(
+      Objects.search().ufoFsr().all(),
+      team.operatorCode,
+    );
   }
 }

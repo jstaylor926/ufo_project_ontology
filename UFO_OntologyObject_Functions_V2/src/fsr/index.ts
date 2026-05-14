@@ -8,4 +8,5 @@
 export { INACTIVITY_THRESHOLD_MS } from "./types.js";
 export { isInactive } from "./identity.js";
 export { addFavorites, removeFavorites, isFavoriteOf } from "./favorites.js";
-export { FSRFunctionsV2 } from "./adapter.js";
+export { selectTeamMembers, type FsrLite } from "./teams.js";
+export { FSRFunctionsV2, FsrTeamV2 } from "./adapter.js";

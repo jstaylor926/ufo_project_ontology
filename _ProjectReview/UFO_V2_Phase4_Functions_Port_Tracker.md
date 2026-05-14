@@ -43,19 +43,19 @@
 - [x] V1 → V2 deltas applied: `currentLogIn` → `lastLogIn`; `scanandDelete` operand-order bug fixed; missing-`lastLogIn` policy = skip; `scenarioFSRMatch` no longer mutates entries, returns `FunctionsMap<Ufoentry, boolean>` instead.
 - [ ] V1 reference retired in `UFO_OntologyObject_Functions/index.ts` — defer until remaining modules ship.
 
-### fsrTeam — port to `src/fsr-team/` (or fold into `fsr/`)
-- [ ] Decide: standalone module vs. merged into `fsr/`
-- [ ] Pure core
-- [ ] Adapter
-- [ ] Tests
-- **Blocker:** Phase 3.
+### fsrTeam — folded into `src/fsr/`
+- [x] Decision: **folded into `src/fsr/`** (single FSR domain module, peer of `favorites.ts` / `identity.ts`).
+- [x] Pure core: `src/fsr/teams.ts` (`selectTeamMembers`, `FsrLite` projection type).
+- [x] Adapter: `FsrTeamV2` class added to `src/fsr/adapter.ts`.
+- [x] Tests: `test/fsr/teams.test.ts` (8 cases).
+- [x] V1 → V2 renames applied: `team.operator` → `team.operatorCode`; `f.fsrteam` → `f.operatorCode`; `f.name` → `f.userId`; `team.fsrs` → `team.members` (per Ontology Spec §4.9 / §4.10).
+- [x] V1 bug fixed: missing-`return` in the filter callback meant `team.fsrs` was always written as `[]` — `setTeamMembers` has never populated a team in production.
+- [ ] V1 reference retired in `UFO_OntologyObject_Functions/index.ts` — defer until remaining modules ship.
 
-### Misc — port to `src/misc/`
-- [ ] Triage: only **1** `@OntologyEditFunction` is active (line 86); 4 others are commented out. Confirm with user which (if any) commented-out functions should be revived in V2.
-- [ ] Pure core for the active function
-- [ ] Adapter
-- [ ] Tests
-- **Blocker:** Phase 3 (the active function touches `Ufoentry` properties that are renaming).
+### Misc — superseded; no live surface to port
+- [x] Triage: only `commentFlag` was active; **already ported** as `CommentsV2.setCommentFlag` in `src/comments/adapter.ts` (Ontology Spec §6.1 reshaped it from a toggle to an idempotent setter).
+- [-] Remaining 4 functions (`messagesForSheets`, `messagesForSheetsFrom`, `fleetForSheetsUAL`, `closeDossiersMessage`) — **dropped (user decision, 2026-05-14).** Comments treated as deletion intent; nothing to port.
+- [x] Misc.ts marked for retirement alongside other V1 modules once `UFO_OntologyObject_Functions/index.ts` cutover happens.
 
 ### reportGenerator — port to `src/reports/`
 - [ ] Inventory the 4 V1 `@Function` methods
@@ -65,11 +65,14 @@
 - **Blocker:** Phase 3 — reports stitch across `Ufoentry`, comments, FSR data; format depends on V2 column shape.
 
 ### restoration — port to `src/restoration/`
-- [ ] Inventory the 3 V1 `@Function` methods
-- [ ] Pure core
-- [ ] Adapter
-- [ ] Tests
-- **Blocker:** Phase 3 (verify dependencies first; may be lighter-touch than reports).
+- [x] Inventory: 3 `@Function` methods (`returnRestoredList`, `returnRestoredList_number`, `filterChange`) plus 1 helper (`retStringArr`).
+- [x] Pure core: `src/restoration/arrays.ts` — `arraysEqualUnordered`, `ensureStringArray`, `toIntegerArray`, `toStringArray`.
+- [x] Adapter: `src/restoration/adapter.ts` — `RestorationV2` class (`returnRestoredList`, `returnRestoredListNumber`, `filterChange`). 18-arg `filterChange` signature preserved for Workshop binding stability.
+- [x] V1 refactor: the 9 copy-pasted sort-and-compare blocks in `filterChange` collapse to a `pairs.some(([a, b]) => !arraysEqualUnordered(a, b))` loop.
+- [x] Foundry stub addition: `Integer` type alias (`= number`).
+- [x] Tests: `test/restoration/arrays.test.ts` (20 cases).
+- [x] No blocker: this module had no V1→V2 column-name dependencies.
+- [ ] V1 reference retired in `UFO_OntologyObject_Functions/index.ts` — defer until cutover.
 
 ### PathSupp
 - [-] **Won't port as-is.** Entire file is commented out in V1; import is also commented in `UFO_OntologyObject_Functions/index.ts`. Action: either delete in V2 or re-spec from scratch if a path-support feature is desired.

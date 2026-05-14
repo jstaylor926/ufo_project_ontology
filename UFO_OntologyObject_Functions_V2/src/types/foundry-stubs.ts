@@ -23,6 +23,12 @@ export function Edits(_objectType: unknown): MethodDecorator {
   return () => {};
 }
 
+// --- numeric primitives ------------------------------------------------
+// Foundry distinguishes `Integer` from `Double`/`Float`; the TS runtime
+// has only `number`. We alias `Integer` so V1-style signatures port over
+// without flagging type errors.
+export type Integer = number;
+
 // --- timestamps --------------------------------------------------------
 export class Timestamp {
   constructor(private readonly _ms: number) {}
@@ -37,6 +43,82 @@ export class Timestamp {
   }
   toISOString(): string {
     return new Date(this._ms).toISOString();
+  }
+}
+
+/**
+ * LocalDate stub — represents a calendar date without time-of-day. In
+ * Foundry, `LocalDate` is comparable and supports `now()`. Locally we
+ * back it with the start-of-day epoch ms so numeric `valueOf()` based
+ * comparisons (V1 uses `>=`) work.
+ */
+export class LocalDate {
+  constructor(private readonly _startOfDayMs: number) {}
+  static now(): LocalDate {
+    const d = new Date();
+    return new LocalDate(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  }
+  static fromEpochMs(ms: number): LocalDate {
+    return new LocalDate(ms);
+  }
+  valueOf(): number {
+    return this._startOfDayMs;
+  }
+}
+
+// --- notification builders --------------------------------------------
+// Foundry's notification API uses chainable builders to construct an
+// `EmailNotificationContent` + `ShortNotification` envelope. Locally we
+// stub the chain so adapter typecheck passes; the actual delivery
+// happens in Foundry.
+
+export class EmailNotificationContent {
+  constructor(public readonly subject: string, public readonly body: string) {}
+  static builder() {
+    let _subject = "";
+    let _body = "";
+    const b = {
+      subject(s: string) { _subject = s; return b; },
+      body(s: string) { _body = s; return b; },
+      build(): EmailNotificationContent { return new EmailNotificationContent(_subject, _body); },
+    };
+    return b;
+  }
+}
+
+export class ShortNotification {
+  constructor(public readonly heading: string, public readonly content: string) {}
+  static builder() {
+    let _heading = "";
+    let _content = "";
+    const b = {
+      heading(s: string) { _heading = s; return b; },
+      content(s: string) { _content = s; return b; },
+      build(): ShortNotification { return new ShortNotification(_heading, _content); },
+    };
+    return b;
+  }
+}
+
+export class Notification {
+  constructor(
+    public readonly shortNotification: ShortNotification,
+    public readonly emailNotificationContent: EmailNotificationContent,
+  ) {}
+  static builder() {
+    let _short: ShortNotification | undefined;
+    let _email: EmailNotificationContent | undefined;
+    const b = {
+      shortNotification(s: ShortNotification) { _short = s; return b; },
+      emailNotificationContent(e: EmailNotificationContent) { _email = e; return b; },
+      build(): Notification {
+        return new Notification(
+          _short ?? new ShortNotification("", ""),
+          _email ?? new EmailNotificationContent("", ""),
+        );
+      },
+    };
+    return b;
   }
 }
 
@@ -66,6 +148,19 @@ export class FunctionsMap<K, V> {
 // — `@Edits(Ufoentry)` passes the class as a value, which only works
 // because TypeScript class declarations produce both a type and a value.
 
+export interface ObjectSet<T> {
+  all(): T[];
+  filter(predicate: (item: T) => unknown): ObjectSet<T>;
+}
+
+function emptyObjectSet<T>(): ObjectSet<T> {
+  const s: ObjectSet<T> = {
+    all: () => [],
+    filter: () => s,
+  };
+  return s;
+}
+
 export class Ufoentry {
   idDossier?: string;
   comments?: string[];
@@ -78,16 +173,44 @@ export class Ufoentry {
 }
 
 export class UfoFsr {
+  userId?: string;
   name?: string;
+  operatorCode?: string;
   lastLogIn?: Timestamp;
   postCommentFlag?: boolean;
   favorites?: string[];
+  ufoescalations: ObjectSet<Ufoescalation> = emptyObjectSet<Ufoescalation>();
   delete(): void { /* stub */ }
 }
 
-export interface ObjectSet<T> {
-  all(): T[];
-  filter(predicate: (item: T) => unknown): ObjectSet<T>;
+export class Fsrteam {
+  teamId?: string;
+  teamName?: string;
+  operator?: string;
+  operatorCode?: string;
+  members?: string[];
+  comments?: string[];
+  watchList?: string[];
+  ufofsrs: ObjectSet<UfoFsr> = emptyObjectSet<UfoFsr>();
+}
+
+/**
+ * V2 stub retains V1 column spelling `escalationRasisedDate` (misspelled
+ * as `Rasised`) because that is the actual materialized property. The
+ * rename is Phase-3 ontology re-shape work, tracked separately.
+ */
+export class Ufoescalation {
+  escalationId?: string;
+  user?: string;
+  escalationType?: string;
+  dossierId?: string;
+  escalationRasisedDate?: LocalDate;
+}
+
+export class LogFsrinputDriver {
+  actionRid?: string;
+  actionTimestamp?: Timestamp;
+  ufoentry?: string[];
 }
 
 export const Objects = {
@@ -105,6 +228,20 @@ export const Objects = {
         filter: () => Objects.search().ufoFsr().filter(_),
       }),
       all: (): UfoFsr[] => [],
+    }),
+    fsrteam: () => ({
+      filter: (_: (t: Fsrteam) => unknown): ObjectSet<Fsrteam> => ({
+        all: () => [],
+        filter: () => Objects.search().fsrteam().filter(_),
+      }),
+      all: (): Fsrteam[] => [],
+    }),
+    logFsrinputDriver: () => ({
+      filter: (_: (l: LogFsrinputDriver) => unknown): ObjectSet<LogFsrinputDriver> => ({
+        all: () => [],
+        filter: () => Objects.search().logFsrinputDriver().filter(_),
+      }),
+      all: (): LogFsrinputDriver[] => [],
     }),
   }),
 };
